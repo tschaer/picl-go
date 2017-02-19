@@ -17,7 +17,7 @@ import (
 	"os"
 )
 
-const Ver = "PICL compiler v0.1"
+const Ver = "PICL compiler v0.1a"
 
 func init() {
 	flag.BoolVar(&PICL.Dump, "d", false, "Dump listing output to console")
