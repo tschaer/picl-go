@@ -1,5 +1,8 @@
 # picl-go
 Niklaus Wirth's [PICL compiler](https://www.inf.ethz.ch/personal/wirth/PICL/index.html) ported to Go. PICL is a simplified Pascal-like high-level language for Microchip's PIC microncontrollers. 
 
-More notes on the [Wiki](https://github.com/tschaer/picl-go/wiki/PICL-in-Go)
+More notes on this wiki page: [PICL in Go](https://github.com/tschaer/picl-go/wiki/PICL-in-Go)
 
+# Project Progress
+
+The development path of the project is tracked [here](https://github.com/tschaer/picl-go/wiki/Progress)
