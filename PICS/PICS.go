@@ -86,6 +86,7 @@ var (
 )
 
 // key & symno are the table of recognised symbols in the PICL grammar
+// NOTE!! must be sorted, binary search is used
 var key = [...]string {
    "BEGIN", "BOOL", "CONST", "DEC",
    "DO", "ELSE", "ELSIF", "End",
