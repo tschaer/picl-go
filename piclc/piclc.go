@@ -10,11 +10,11 @@ C:\Data\Personal\go\bin> piclc file.asm
 package main
 
 import (
-	"picl-go/PICL"
 	"bufio"
 	"flag"
 	"fmt"
 	"os"
+	"picl-go/PICL"
 )
 
 const Ver = "PICL compiler v0.1a"
@@ -43,7 +43,7 @@ func main() {
 		fmt.Println(err)
 		return
 	} else {
-		fmt.Printf("Gonna compile %s\n", filename)
+		fmt.Printf("Compiling: %s\n", filename)
 		PICL.Compile(bufio.NewReader(file))
 	}
 }
