@@ -1,0 +1,48 @@
+{ Expected output:
+  0 0x080D
+  1 0x020C
+  2 0x1D03
+  3 0x2805
+  4 0x018E
+  5 0x080D
+  6 0x020C
+  7 0x1D03
+  8 0x2812
+  9 0x080E
+  A 0x020D
+  B 0x1903
+  C 0x2812
+  D 0x080F
+  E 0x020E
+  F 0x1C03
+ 10 0x2812
+ 11 0x018E
+ 12 0x080D
+ 13 0x020C
+ 14 0x1C03
+ 15 0x281E
+ 16 0x080D
+ 17 0x020E
+ 18 0x1803
+ 19 0x281E
+ 1A 0x080E
+ 1B 0x020F
+ 1C 0x1803
+ 1D 0x281F
+ 1E 0x018E
+}
+MODULE Conditions;
+   INT x, y, z, w;
+   SET s;
+   BOOL b;
+BEGIN
+   IF x = y THEN
+      z := 0
+   END;
+   IF x = y & y # z & z >= w THEN
+      z := 0
+   END;
+   IF x < y OR y <= z OR z > w THEN
+      z := 0
+   END
+END Conditions.

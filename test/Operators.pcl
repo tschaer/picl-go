@@ -1,0 +1,20 @@
+{ Expected output:
+  0 0x140C
+  1 0x1018 (BCF 3 13 = 0x118D; this is BCF 0 24)
+  2 0x0A8E
+  3 0x038E
+  4 0x0D8E
+  5 0x0C8E
+}
+MODULE Operators;
+   BOOL b;
+   SET s;
+   INT x;
+BEGIN
+   !b;
+   !~s.3;
+   INC x;
+   DEC x;
+   ROL x;
+   ROR x;
+END Operators.

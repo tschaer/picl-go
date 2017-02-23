@@ -1,0 +1,11 @@
+{ Expected output:
+  0 0x1C05
+  1 0x2800
+  2 0x1986
+  3 0x2802
+}
+MODULE Queries;
+BEGIN
+   ?A;
+   ?~B.3
+END Queries.

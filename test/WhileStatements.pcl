@@ -1,0 +1,41 @@
+{ Expected output:
+  0 0x080C
+  1 0x1903
+  2 0x2808
+  3 0x080D
+  4 0x078E
+  5 0x3001
+  6 0x028C
+  7 0x2800
+  8 0x080D
+  9 0x020C
+  A 0x1D03
+  B 0x2810
+  C 0x180F
+  D 0x2810
+  E 0x140F
+  F 0x2808
+ 10 0x080D
+ 11 0x020C
+ 12 0x1803
+ 13 0x2816
+ 14 0x1C0F
+ 15 0x2818
+ 16 0x100F
+ 17 0x2810
+}
+MODULE WhileStatements;
+   INT x, y, z;
+   BOOL b;
+BEGIN
+   WHILE x # 0 DO
+      z := z + y;
+      x := x - 1
+   END;
+   WHILE x = y & ~b DO
+      !b
+   END;
+   WHILE x >= y OR b DO
+      !~b
+   END
+END WhileStatements.

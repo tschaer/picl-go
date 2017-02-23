@@ -1,0 +1,42 @@
+{ Expected output:
+  0 0x3003
+  1 0x070C
+  2 0x008E
+  3 0x3003
+  4 0x020D
+  5 0x008E
+  6 0x080D
+  7 0x070C
+  8 0x008E
+  9 0x080D
+  A 0x078C
+  B 0x080C
+  C 0x3C0F
+  D 0x008E
+  E 0x3007
+  F 0x040F
+ 10 0x0091
+ 11 0x300F
+ 12 0x050F
+ 13 0x0091
+ 14 0x0810
+ 15 0x060F
+ 16 0x0091
+ 17 0x0810
+ 18 0x068F
+}
+MODULE Expressions;
+   INT x, y, z;
+   SET u, v, w;
+BEGIN
+   z := x + 3;
+   z := y - 3;
+   z := x + y;
+   x := x + y;
+   z := 15 - x;
+   w := u + $07;
+   w := u * $0F;
+   w := u - v;
+   u := u - v
+END Expressions.
+   

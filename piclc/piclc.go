@@ -17,7 +17,7 @@ import (
 	"picl-go/PICL"
 )
 
-const Ver = "PICL compiler v0.1a"
+const Ver = "PICL compiler v1.0-alpha-2"
 
 func init() {
 	flag.BoolVar(&PICL.Dump, "d", false, "Dump listing output to console")

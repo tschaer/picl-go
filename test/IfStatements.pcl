@@ -1,0 +1,48 @@
+{ Expected output:
+  0 0x1C0D
+  1 0x2805
+  2 0x080C
+  3 0x3C00
+  4 0x008C
+  5 0x1C0D
+  6 0x280A
+  7 0x3001
+  8 0x008C
+  9 0x280E
+  A 0x1C0E
+  B 0x280E
+  C 0x3002
+  D 0x008C
+  E 0x1C0D
+  F 0x2813
+ 10 0x3003
+ 11 0x008C
+ 12 0x281A
+ 13 0x1C0E
+ 14 0x2818
+ 15 0x3004
+ 16 0x008C
+ 17 0x281A
+ 18 0x3005
+ 19 0x008C
+}
+MODULE IfStatements;
+   INT x;
+   BOOL p, q;
+BEGIN
+   IF p THEN
+      x := 0 - x
+   END;
+   IF p THEN
+      x := 1
+   ELSIF q THEN
+      x := 2
+   END;
+   IF p THEN
+      x := 3
+   ELSIF q THEN
+      x := 4
+   ELSE
+      x:= 5
+   END
+END IfStatements.

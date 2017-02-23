@@ -1,0 +1,16 @@
+{ Expected output:
+  0 0x080C
+  1 0x008D
+  2 0x300A
+  3 0x008D
+  4 0x018D
+  Run with $GOROOT\bin> piclc ..\src\picl-go\test\Assignments.pcl
+}
+MODULE Assignments;
+   CONST N = 10;
+   INT x, z;
+BEGIN
+   z := x;
+   z := N;
+   z := 0;
+END Assignments.
