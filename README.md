@@ -6,3 +6,5 @@ More notes on this wiki page: [PICL in Go](https://github.com/tschaer/picl-go/wi
 # Project Progress
 
 The development path of the project is tracked [here](https://github.com/tschaer/picl-go/wiki/Progress)
+
+Release binaries (Windows only) are [here](https://github.com/tschaer/picl-go/releases)
