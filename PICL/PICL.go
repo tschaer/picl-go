@@ -6,18 +6,18 @@ package PICL
 
 import (
 	"bufio"
-   "bytes"
+	"bytes"
 	"fmt"
 	"picl-go/PICS"
 )
 
 // Item forms
 const (
-   variable = 1
-   constant = 2
-   procedure = 3
+	variable  = 1
+	constant  = 2
+	procedure = 3
 )
-   
+
 type Object *ObjDesc
 type ObjDesc struct {
 	name               []byte
@@ -31,7 +31,8 @@ var (
 	IdList, IdList0, undef Object
 	pc, dc                 int
 	err                    bool
-   code                   [1024]int
+	errs                   int
+	code                   [1024]int
 )
 
 // Instruction tables for decoder
@@ -61,6 +62,23 @@ var table3 = [...]string{
 func Mark(n int) {
 	fmt.Printf("Parse error, code: %d\n", n)
 	err = true
+	errs += 1
+}
+
+// Look up a name in the symbol table
+// Linear search
+func this(id []byte) Object {
+	var obj Object
+
+	obj = IdList
+	for obj != nil && !(bytes.Compare(id, obj.name) == 0) {
+		obj = obj.next
+	}
+	if obj == nil {
+		Mark(10)
+		obj = undef
+	}
+	return obj
 }
 
 // Add a new value to the symbol table
@@ -77,136 +95,634 @@ func enter(id string, form int, typ int, a int) {
 
 // Put down a regular opcode
 func emit(op int, a int) {
-   code[pc] = op * 0x100 + a
-   pc += 1
+	code[pc] = op*0x100 + a
+	pc += 1
 }
 
 // Put down BTFSS, BTFSC, BSF or BCF
 func emit1(op int, n int, a int) {
-   code[pc] = ((op + 4) * 8 + n) * 0x80 + a
-   pc += 1
+	code[pc] = ((op+4)*8+n)*0x80 + a
+	pc += 1
 }
-   
+
+// Handle bit selector in set notation
+func index(n *int) {
+	*n = 0
+	if sym == PICS.Period {
+		PICS.Get(&sym)
+		if sym == PICS.Number {
+			*n = PICS.Val
+			PICS.Get(&sym)
+		} else {
+			Mark(11)
+		}
+	}
+}
+
+// Arithmetic expression handling
+func expression() {
+	var x, y Object
+	var op, xf, xt, xval, yt, yval int
+
+	// Object or literal?
+	if sym == PICS.Ident {
+		x = this(PICS.Id)
+		xf = x.form
+		xt = x.typ
+		xval = x.a
+		PICS.Get(&sym)
+	} else if sym == PICS.Number {
+		xf = constant
+		xval = PICS.Val
+		xt = PICS.Typ
+		PICS.Get(&sym)
+	} else {
+		Mark(10)
+		xval = 0
+	}
+	// Is it a function procedure?
+	if sym == PICS.Lparen {
+		PICS.Get(&sym)
+		if x.form != procedure {
+			Mark(3)
+		}
+		if sym != PICS.Rparen {
+			expression()
+		}
+		emit(0x20, x.a)
+		if sym == PICS.Rparen {
+			PICS.Get(&sym)
+		} else {
+			Mark(8)
+		}
+	} else if (sym >= PICS.Ast) && (sym <= PICS.Minus) {
+		// dyadic expression
+		op = sym
+		PICS.Get(&sym)
+		yval = 0
+		if sym == PICS.Ident {
+			y = this(PICS.Id)
+			yt = y.typ
+			PICS.Get(&sym)
+			// Instruction selection
+			if y.form == variable {
+				emit(0x08, y.a)
+			} else if y.form == constant {
+				emit(0x30, y.a)
+			} else {
+				Mark(10)
+			}
+		} else if sym == PICS.Number {
+			yval = PICS.Val
+			yt = PICS.Typ
+			emit(0x30, yval)
+			PICS.Get(&sym)
+		}
+		// Type check
+		if xt != yt {
+			Mark(111)
+		}
+		// Instruction selection
+		if xf == variable {
+			if op == PICS.Plus {
+				if xt == PICS.Int_t {
+					emit(0x07, x.a)
+				} else {
+					emit(0x04, x.a)
+				}
+			} else if op == PICS.Minus {
+				if xt == PICS.Int_t {
+					emit(0x02, x.a)
+				} else {
+					emit(0x06, x.a)
+				}
+			} else if op == PICS.Ast {
+				if xt == PICS.Int_t {
+					Mark(11)
+				} else {
+					emit(0x05, x.a)
+				}
+			}
+		} else if xf == constant {
+			if op == PICS.Plus {
+				if xt == PICS.Int_t {
+					emit(0x3E, xval)
+				} else {
+					emit(0x38, xval)
+				}
+			} else if op == PICS.Minus {
+				if xt == PICS.Int_t {
+					emit(0x3C, xval)
+				} else {
+					emit(0x3A, xval)
+				}
+			} else if op == PICS.Ast {
+				if xt == PICS.Int_t {
+					Mark(11)
+				} else {
+					emit(0x39, xval)
+				}
+			} else {
+				Mark(9)
+			}
+		} else {
+			Mark(10)
+		}
+	} else if xf == variable {
+		emit(0x08, x.a)
+	} else if xf == constant {
+		emit(0x30, xval)
+	} else {
+		Mark(10)
+	}
+}
+
+// Logical expression handling
+func term() {
+	var x, y Object
+	var n, rel, yf, ya int
+
+	if sym == PICS.Ident {
+		x = this(PICS.Id)
+		PICS.Get(&sym)
+		if (sym >= PICS.Eql) && (sym <= PICS.Gtr) {
+			rel = sym
+			PICS.Get(&sym)
+			if sym == PICS.Ident {
+				y = this(PICS.Id)
+				PICS.Get(&sym)
+				yf = y.form
+				ya = y.a
+			} else if sym == PICS.Number {
+				yf = constant
+				ya = PICS.Val
+				PICS.Get(&sym)
+			}
+			if rel < PICS.Leq {
+				if yf == variable {
+					emit(0x08, ya)
+					emit(0x02, x.a)
+				} else if yf == constant {
+					if ya == 0 {
+						emit(0x08, x.a)
+					} else {
+						emit(0x30, ya)
+						emit(0x02, x.a)
+					}
+				}
+			} else {
+				emit(0x08, x.a)
+				if yf == variable {
+					emit(0x02, ya)
+				} else if (yf == constant) && (yf != 0) {
+					emit(0x60, ya)
+				}
+			}
+			if rel == PICS.Eql {
+				emit1(3, 2, 3)
+			} else if rel == PICS.Neq {
+				emit1(2, 2, 3)
+			} else if (rel == PICS.Geq) || (rel == PICS.Leq) {
+				emit1(3, 0, 3)
+			} else if (rel == PICS.Lss) || (rel == PICS.Gtr) {
+				emit1(2, 0, 3)
+			}
+		} else {
+			index(&n)
+			emit1(3, n, x.a)
+		}
+	} else if sym == PICS.Not {
+		PICS.Get(&sym)
+		if sym == PICS.Ident {
+			x = this(PICS.Id)
+			PICS.Get(&sym)
+			index(&n)
+			emit1(2, n, x.a)
+		} else {
+			Mark(10)
+		}
+	} else {
+		Mark(10)
+	}
+}
+
+// Conditional expression for guarded statements
+func condition(link *int) {
+	var L, L0, L1 int
+
+	term()
+	code[pc] = 0
+	L = pc
+	pc += 1
+
+	if sym == PICS.And {
+		for {
+			PICS.Get(&sym)
+			term()
+			code[pc] = L
+			L = pc
+			pc += 1
+			if sym != PICS.And {
+				break
+			}
+		}
+	} else if sym == PICS.Or {
+		for {
+			PICS.Get(&sym)
+			term()
+			code[pc] = L
+			L = pc
+			pc += 1
+			if sym != PICS.Or {
+				break
+			}
+		}
+		L0 = code[L]
+		code[L] = 0
+		for {
+			if (code[L0-1] / 0x400) == 6 {
+				code[L0-1] += 0x400
+			} else {
+				code[L0-1] -= 0x400
+			}
+			L1 = code[L0]
+			code[L0] = pc + 0x2800
+			L0 = L1
+			if L0 == 0 {
+				break
+			}
+		}
+	}
+	*link = L
+}
+
+// Fix up forward and backward jumps
+func fixup(L int, k int) {
+	var L1 int
+
+	for L != 0 {
+		L1 = code[L]
+		code[L] = k + 0x2800
+		L = L1
+	}
+}
+
+// Statement sequence
+// NOTE: Statement() is not a pointer indirection
+func StatSeq() {
+	Statement()
+	for sym == PICS.Semicolon {
+		PICS.Get(&sym)
+		Statement()
+	}
+}
+
+// Guarded statement block
+// NOTE: not actually called anywhere in original code, but if condition terminating
+// symbol is made a param, can be used for IF, ELSIF and WHILE blocks
+func Guarded(s int, L *int) {
+	condition(L)
+	if sym == s {
+		PICS.Get(&sym)
+	} else {
+		Mark(14)
+	}
+	StatSeq()
+}
+
+// Conditional Statements
+func IfStat() {
+	var L0, L int
+
+	Guarded(PICS.Then, &L)
+	L0 = 0
+	for sym == PICS.Elsif {
+		code[pc] = L0
+		L0 = pc
+		pc += 1
+		fixup(L, pc)
+		PICS.Get(&sym)
+		Guarded(PICS.Then, &L)
+	}
+	if sym == PICS.Else_ {
+		code[pc] = L0
+		L0 = pc
+		pc += 1
+		fixup(L, pc)
+		PICS.Get(&sym)
+		StatSeq()
+	} else {
+		fixup(L, pc)
+	}
+	if sym == PICS.End {
+		PICS.Get(&sym)
+	} else {
+		Mark(15)
+	}
+	fixup(L0, pc)
+}
+
+// Conditional Repetition: condition first
+func WhileStat() {
+	var L0, L int
+
+	L0 = pc
+	Guarded(PICS.Do, &L)
+	emit(0x28, L0)
+	fixup(L, pc)
+	for sym == PICS.Elsif {
+		PICS.Get(&sym)
+		Guarded(PICS.Do, &L)
+		emit(0x28, L0)
+		fixup(L, pc)
+	}
+	if sym == PICS.End {
+		PICS.Get(&sym)
+	} else {
+		Mark(16)
+	}
+}
+
+// Conditional Repetition: condition last
+func RepeatStat() {
+	var L0, L int
+
+	L0 = pc
+	StatSeq()
+	if sym == PICS.Until {
+		PICS.Get(&sym)
+		condition(&L)
+		if (code[pc-4]/0x100 == 3) && (code[pc-3]/0x100 == 8) &&
+			(code[pc-2] == 0x1D03) && (code[pc-4]%0x80 == code[pc-3]%0x100) {
+			code[pc-4] += 0x800
+			code[pc-3] = 0
+			pc -= 2
+			L = pc - 1
+		}
+		fixup(L, L0)
+	} else if sym == PICS.End {
+		PICS.Get(&sym)
+		emit(0x28, L0)
+	} else {
+		Mark(25)
+	}
+}
+
+// Assignment Statement (new)
+// NOTE: factored out from Statement() vs original code
+func AssignStat(x Object) {
+	var w int
+
+	PICS.Get(&sym)
+	if x.form != variable {
+		Mark(2)
+	}
+	expression()
+	w = code[pc-1]
+	if w == 0x3000 {
+		code[pc-1] = x.a + 0x180
+	} else if ((w / 0x100) <= 13) && (w%0x100 == x.a) {
+		code[pc-1] += 0x80
+	} else {
+		emit(0, x.a+0x80)
+	}
+}
+
+// Procedure Call Statement (new)
+// NOTE: factored out from Statement() vs original code
+func CallStat(x Object) {
+	if x.form != procedure {
+		Mark(3)
+	}
+	if sym == PICS.Lparen {
+		PICS.Get(&sym)
+		expression()
+		emit(0x20, x.a)
+		if sym == PICS.Rparen {
+			PICS.Get(&sym)
+		} else {
+			Mark(8)
+		}
+	} else {
+		emit(0x20, x.a)
+	}
+}
+
+func Operand1(cd int) {
+	var x Object
+
+	if sym == PICS.Ident {
+		x = this(PICS.Id)
+		PICS.Get(&sym)
+		if x.form != variable {
+			Mark(2)
+		}
+		emit(cd, x.a+0x80)
+	} else {
+		Mark(10)
+	}
+}
+
+func Operand2(cd int) {
+	var x Object
+	var n int
+
+	if sym == PICS.Ident {
+		x = this(PICS.Id)
+		PICS.Get(&sym)
+		if x.form != variable {
+			Mark(2)
+		}
+		index(&n)
+		emit1(cd, n, x.a)
+	} else {
+		Mark(10)
+	}
+}
+
+// Statement
+// NOTE: renamed from Statement0
+func Statement() {
+	var x Object
+
+	switch sym {
+	case PICS.Ident:
+		x = this(PICS.Id)
+		PICS.Get(&sym)
+		if sym == PICS.Becomes {
+			AssignStat(x)
+		} else {
+			CallStat(x)
+		}
+	case PICS.Inc:
+		PICS.Get(&sym)
+		Operand1(10)
+	case PICS.Dec:
+		PICS.Get(&sym)
+		Operand1(3)
+	case PICS.Rol:
+		PICS.Get(&sym)
+		Operand1(13)
+	case PICS.Ror:
+		PICS.Get(&sym)
+		Operand1(12)
+	case PICS.Op:
+		PICS.Get(&sym)
+		if sym == PICS.Not {
+			PICS.Get(&sym)
+			Operand2(0)
+		} else {
+			Operand2(1)
+		}
+	case PICS.Query:
+		PICS.Get(&sym)
+		if sym == PICS.Not {
+			PICS.Get(&sym)
+			Operand2(2)
+		} else {
+			Operand2(3)
+		}
+		emit(0x28, pc-1)
+	case PICS.Lparen:
+		PICS.Get(&sym)
+		StatSeq()
+		if sym == PICS.Rparen {
+			PICS.Get(&sym)
+		} else {
+			Mark(8)
+		}
+	case PICS.If_:
+		PICS.Get(&sym)
+		IfStat()
+	case PICS.While:
+		PICS.Get(&sym)
+		WhileStat()
+	case PICS.Repeat:
+		PICS.Get(&sym)
+		RepeatStat()
+	}
+}
+
 // Procedure declarations
 func ProcDecl() {
-   var typ, partyp, restyp, pc0 int
-   var obj Object
-   var name = make([]byte, 0, 16)
-   
-   obj = IdList
-   partyp = 0
-   restyp = 0
-   pc0 = pc
-   
-   // Procedure name
-   if sym == PICS.Ident {
-      name = append(name, PICS.Id...)
-      PICS.Get(&sym)
-   } else {
-      Mark(10)
-   }
-   
-   // Optional parens with optional argument
-   if sym == PICS.Lparen {
-      PICS.Get(&sym)
-      if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-         partyp = sym - PICS.Int_ + 1
-         PICS.Get(&sym)
-         if sym == PICS.Ident {
-            enter(string(PICS.Id), variable, partyp, dc)
-            PICS.Get(&sym)
-            emit(0, dc + 0x80)
-            dc += 1
-         } else {
-            Mark(10)
-         }
-      }
-      if sym == PICS.Rparen {
-         PICS.Get(&sym)
-      } else {
-         Mark(8)
-      }
-   }
-   
-   // Optional result type
-   if sym == PICS.Colon {
-      PICS.Get(&sym)
-      if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-         restyp = sym - PICS.Int_ + 1
-         PICS.Get(&sym)
-      } else {
-         Mark(10)
-      }
-   }
-   
-   // Terminate procedure header
-   if sym == PICS.Semicolon {
-      PICS.Get(&sym)
-   } else {
-      Mark(20)
-   }
-   
-   // Variable declarations
-   for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-      typ = sym - PICS.Int_ + 1
-      PICS.Get(&sym)
-      for sym == PICS.Ident {
-         enter(string(PICS.Id), variable, typ, dc)
-         dc += 1
-         PICS.Get(&sym)
-         if sym == PICS.Comma {
-            PICS.Get(&sym)
-         }
-      }
-      if sym == PICS.Semicolon {
-         PICS.Get(&sym)
-      } else {
-         Mark(20)
-      }
-   }
-   
-   // Procedure body
-   if sym == PICS.Begin {
-      PICS.Get(&sym)
-      //StatSeq()
-   } else {
-      Mark(21)
-   }
-   if sym == PICS.Return_ {
-      PICS.Get(&sym)
-      //expression()
-   }
-   emit(0, 8)
-   if sym == PICS.End {
-      PICS.Get(&sym)
-      if sym == PICS.Ident {
-         if !(bytes.Compare(PICS.Id, name) == 0) {
-            Mark(22)
-         }
-         PICS.Get(&sym)
-      } else {
-         Mark(10)
-      }
-   } else {
-      Mark(18)
-   }
-   if sym == PICS.Semicolon {
-      PICS.Get(&sym)
-   } else {
-      Mark(20)
-   }
-   
-   // Clean up
-   IdList = obj
-   enter(string(name), procedure, restyp, pc0)
-   IdList.ptyp = partyp
-}
-      
-func Module() {
-   var typ int
+	var typ, partyp, restyp, pc0 int
+	var obj Object
 	var name = make([]byte, 0, 16)
 
-   // Module header
+	obj = IdList
+	partyp = 0
+	restyp = 0
+	pc0 = pc
+
+	// Procedure name
+	if sym == PICS.Ident {
+		name = append(name, PICS.Id...)
+		PICS.Get(&sym)
+	} else {
+		Mark(10)
+	}
+
+	// Optional parens with optional argument
+	if sym == PICS.Lparen {
+		PICS.Get(&sym)
+		if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
+			partyp = sym - PICS.Int_ + 1
+			PICS.Get(&sym)
+			if sym == PICS.Ident {
+				enter(string(PICS.Id), variable, partyp, dc)
+				PICS.Get(&sym)
+				emit(0, dc+0x80)
+				dc += 1
+			} else {
+				Mark(10)
+			}
+		}
+		if sym == PICS.Rparen {
+			PICS.Get(&sym)
+		} else {
+			Mark(8)
+		}
+	}
+
+	// Optional result type
+	if sym == PICS.Colon {
+		PICS.Get(&sym)
+		if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
+			restyp = sym - PICS.Int_ + 1
+			PICS.Get(&sym)
+		} else {
+			Mark(10)
+		}
+	}
+
+	// Terminate procedure header
+	if sym == PICS.Semicolon {
+		PICS.Get(&sym)
+	} else {
+		Mark(20)
+	}
+
+	// Variable declarations
+	for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
+		typ = sym - PICS.Int_ + 1
+		PICS.Get(&sym)
+		for sym == PICS.Ident {
+			enter(string(PICS.Id), variable, typ, dc)
+			dc += 1
+			PICS.Get(&sym)
+			if sym == PICS.Comma {
+				PICS.Get(&sym)
+			}
+		}
+		if sym == PICS.Semicolon {
+			PICS.Get(&sym)
+		} else {
+			Mark(20)
+		}
+	}
+
+	// Procedure body
+	if sym == PICS.Begin {
+		PICS.Get(&sym)
+		StatSeq()
+	} else {
+		Mark(21)
+	}
+	if sym == PICS.Return_ {
+		PICS.Get(&sym)
+		expression()
+	}
+	emit(0, 8)
+	if sym == PICS.End {
+		PICS.Get(&sym)
+		if sym == PICS.Ident {
+			if !(bytes.Compare(PICS.Id, name) == 0) {
+				Mark(22)
+			}
+			PICS.Get(&sym)
+		} else {
+			Mark(10)
+		}
+	} else {
+		Mark(18)
+	}
+	if sym == PICS.Semicolon {
+		PICS.Get(&sym)
+	} else {
+		Mark(20)
+	}
+
+	// Clean up
+	IdList = obj
+	enter(string(name), procedure, restyp, pc0)
+	IdList.ptyp = partyp
+}
+
+func Module() {
+	var typ int
+	var name = make([]byte, 0, 16)
+
+	// Module header
 	if sym == PICS.Module {
 		PICS.Get(&sym)
 		if sym == PICS.Ident {
@@ -221,67 +737,67 @@ func Module() {
 			Mark(20)
 		}
 	}
-   
-   // CONST Declarations
-   if sym == PICS.Const_ {
-      PICS.Get(&sym)
-      for sym == PICS.Ident {
-         enter(string(PICS.Id), constant, 1, 0)
-         PICS.Get(&sym)
-         if sym == PICS.Eql {
-            PICS.Get(&sym)
-            if sym == PICS.Number {
-               IdList.a = PICS.Val
-               PICS.Get(&sym)
-            } else {
-               Mark(10)
-            }
-         } else {
-            Mark(5)
-         }
-         if sym == PICS.Semicolon {
-            PICS.Get(&sym)
-         } else {
-            Mark(20)
-         }
-      }
-   }
-   
-   // Var Declarations: INT, BOOL, SET
-   for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-      typ = sym - PICS.Int_ + 1
-      PICS.Get(&sym)
-      // May be a list of identifiers eg INT a, b, c
-      for sym == PICS.Ident {
-         enter(string(PICS.Id), variable, typ, dc)
-         dc += 1
-         PICS.Get(&sym)
-         if sym == PICS.Comma {
-            PICS.Get(&sym)
-         }
-      }
-      // Optional semicolon after var declaration?
-      if sym == PICS.Semicolon {
-         PICS.Get(&sym)
-      }
-   }
-   
-   // PROCEDURE Declarations
-   for sym == PICS.Proced {
-      PICS.Get(&sym)
-      ProcDecl()
-   }
-      
-   if pc > 1 {
-      code[0] = pc + 0x2800
-   } else {
-      pc = 0
-   }
-   
-   // Module body
+
+	// CONST Declarations
+	if sym == PICS.Const_ {
+		PICS.Get(&sym)
+		for sym == PICS.Ident {
+			enter(string(PICS.Id), constant, 1, 0)
+			PICS.Get(&sym)
+			if sym == PICS.Eql {
+				PICS.Get(&sym)
+				if sym == PICS.Number {
+					IdList.a = PICS.Val
+					PICS.Get(&sym)
+				} else {
+					Mark(10)
+				}
+			} else {
+				Mark(5)
+			}
+			if sym == PICS.Semicolon {
+				PICS.Get(&sym)
+			} else {
+				Mark(20)
+			}
+		}
+	}
+
+	// Var Declarations: INT, BOOL, SET
+	for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
+		typ = sym - PICS.Int_ + 1
+		PICS.Get(&sym)
+		// May be a list of identifiers eg INT a, b, c
+		for sym == PICS.Ident {
+			enter(string(PICS.Id), variable, typ, dc)
+			dc += 1
+			PICS.Get(&sym)
+			if sym == PICS.Comma {
+				PICS.Get(&sym)
+			}
+		}
+		// Optional semicolon after var declaration?
+		if sym == PICS.Semicolon {
+			PICS.Get(&sym)
+		}
+	}
+
+	// PROCEDURE Declarations
+	for sym == PICS.Proced {
+		PICS.Get(&sym)
+		ProcDecl()
+	}
+
+	if pc > 1 {
+		code[0] = pc + 0x2800
+	} else {
+		pc = 0
+	}
+
+	// Module body
 	if sym == PICS.Begin {
 		PICS.Get(&sym)
-		//StatSeq()
+		StatSeq()
 	}
 
 	if sym == PICS.End {
@@ -294,6 +810,7 @@ func Module() {
 	}
 }
 
+// Entry point for module
 func Compile(reader *bufio.Reader) {
 	IdList = IdList0
 	PICS.Init(reader)
@@ -302,15 +819,22 @@ func Compile(reader *bufio.Reader) {
 	err = false
 	PICS.Get(&sym)
 	Module()
+	fmt.Printf("Errors: %d\n", errs)
+	if Dump {
+		for addr, val := range code {
+			fmt.Printf("%#.3x %#.4x\n", addr, val)
+		}
+	}
 }
 
 // Run once on startup
 func init() {
+	err = false
+	errs = 0
 	undef = new(ObjDesc)
 	enter("T", 1, 2, 1)
 	enter("S", 1, 2, 3)
 	enter("A", 1, 2, 5)
 	enter("B", 1, 2, 6)
 	IdList0 = IdList
-	//Statement = Statement0
 }

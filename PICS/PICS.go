@@ -12,7 +12,7 @@ package PICS
 
 import (
 	"bufio"
-   "fmt"
+	"fmt"
 	"io"
 )
 
@@ -20,9 +20,9 @@ const IdLen = 32
 
 // Numeric types
 const (
-	intT  = 1
-	setT  = 2
-	boolT = 3
+	Int_t  = 1
+	Set_t  = 2
+	Bool_t = 3
 )
 
 // Symbols
@@ -213,7 +213,7 @@ func Get(sym *int) {
 				ch, err = r.ReadByte()
 				hex()
 				*sym = Number
-				Typ = setT
+				Typ = Set_t
 			case ch == '&':
 				ch, err = r.ReadByte()
 				*sym = And
@@ -244,7 +244,7 @@ func Get(sym *int) {
 			case ch >= '0' && ch <= '9':
 				number()
 				*sym = Number
-				Typ = intT
+				Typ = Int_t
 			case ch == ':':
 				ch, err = r.ReadByte()
 				if ch == '=' {
@@ -293,7 +293,7 @@ func Get(sym *int) {
 			break
 		}
 	}
-   fmt.Printf("Gets(): sym = %d\n", *sym)
+	fmt.Printf("Gets(): sym = %d\n", *sym)
 }
 
 // Scanner init
