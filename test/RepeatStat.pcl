@@ -1,0 +1,22 @@
+{ Expected output:
+  0 0x300A
+  1 0x078C
+  2 0x3001
+  3 0x028D
+  4 0x080D
+  5 0x1D03
+  6 0x2800
+  7 0x0B8D
+  8 0x2807
+}
+MODULE RepeatStat;
+   INT x, y;
+BEGIN
+   REPEAT
+      x := x + 10;
+      y := y - 1;
+   UNTIL y = 0;
+   REPEAT
+      DEC y
+   UNTIL y = 0
+END RepeatStat.

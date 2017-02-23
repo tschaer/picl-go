@@ -1,0 +1,69 @@
+{ Expected output:
+  0 0x2819
+  1 0x008E
+  2 0x018F
+  3 0x3008
+  4 0x0090
+  5 0x1C0E
+  6 0x2808
+  7 0x0A8F
+  8 0x0C8E
+  9 0x0B90
+  A 0x2805
+  B 0x080F
+  C 0x0008
+  D 0x080C
+  E 0x0091
+  F 0x080D
+ 10 0x008C
+ 11 0x0811
+ 12 0x008D
+ 13 0x0008
+ 14 0x0092
+ 15 0x300A
+ 16 0x0712
+ 17 0x008C
+ 18 0x0008
+ 19 0x200D
+ 1A 0x080D
+ 1B 0x2014
+ 1C 0x080D
+ 1D 0x2001
+ 1E 0x008C
+}
+MODULE Procedures;
+   INT x, y;
+
+   PROCEDURE NofBits(INT x): INT;
+      INT cnt, n;
+   BEGIN
+      cnt := 0;
+      n := 8;
+      REPEAT
+         IF x.0 THEN
+            INC cnt
+         END;
+         ROR x;
+         DEC n
+      UNTIL n = 0;
+      RETURN cnt
+   END NofBits;
+   
+   PROCEDURE Swap;
+      INT z;
+   BEGIN
+      z := x;
+      x := y;
+      y := z
+   END Swap;
+   
+   PROCEDURE P(INT a);
+   BEGIN
+      x := a + 10
+   END P;
+   
+BEGIN
+   Swap;
+   P(y);
+   x := NofBits(y)
+END Procedures.
