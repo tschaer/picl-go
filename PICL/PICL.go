@@ -1,5 +1,5 @@
 /*
-PICL.go: The PICL parser & code generator
+PICL.go: The PICL parser & Code generator
 */
 
 package PICL
@@ -26,13 +26,12 @@ type ObjDesc struct {
 }
 
 var (
-	Dump                   bool
 	sym                    int
 	IdList, IdList0, undef Object
-	pc, dc                 int
-	err                    bool
+	Pc, dc                 int
+	Err                    bool
 	errs                   int
-	code                   [1024]int
+	Code                   [1024]int
 )
 
 // Instruction tables for decoder
@@ -61,7 +60,7 @@ var table3 = [...]string{
 // Parse error
 func Mark(n int) {
 	fmt.Printf("Parse error, code: %d\n", n)
-	err = true
+	Err = true
 	errs += 1
 }
 
@@ -95,14 +94,14 @@ func enter(id string, form int, typ int, a int) {
 
 // Put down a regular opcode
 func emit(op int, a int) {
-	code[pc] = op*0x100 + a
-	pc += 1
+	Code[Pc] = op*0x100 + a
+	Pc += 1
 }
 
 // Put down BTFSS, BTFSC, BSF or BCF
 func emit1(op int, n int, a int) {
-	code[pc] = ((op+4)*8+n)*0x80 + a
-	pc += 1
+	Code[Pc] = ((op+4)*8+n)*0x80 + a
+	Pc += 1
 }
 
 // Handle bit selector in set notation
@@ -311,17 +310,17 @@ func condition(link *int) {
 	var L, L0, L1 int
 
 	term()
-	code[pc] = 0
-	L = pc
-	pc += 1
+	Code[Pc] = 0
+	L = Pc
+	Pc += 1
 
 	if sym == PICS.And {
 		for {
 			PICS.Get(&sym)
 			term()
-			code[pc] = L
-			L = pc
-			pc += 1
+			Code[Pc] = L
+			L = Pc
+			Pc += 1
 			if sym != PICS.And {
 				break
 			}
@@ -330,23 +329,23 @@ func condition(link *int) {
 		for {
 			PICS.Get(&sym)
 			term()
-			code[pc] = L
-			L = pc
-			pc += 1
+			Code[Pc] = L
+			L = Pc
+			Pc += 1
 			if sym != PICS.Or {
 				break
 			}
 		}
-		L0 = code[L]
-		code[L] = 0
+		L0 = Code[L]
+		Code[L] = 0
 		for {
-			if (code[L0-1] / 0x400) == 6 {
-				code[L0-1] += 0x400
+			if (Code[L0-1] / 0x400) == 6 {
+				Code[L0-1] += 0x400
 			} else {
-				code[L0-1] -= 0x400
+				Code[L0-1] -= 0x400
 			}
-			L1 = code[L0]
-			code[L0] = pc + 0x2800
+			L1 = Code[L0]
+			Code[L0] = Pc + 0x2800
 			L0 = L1
 			if L0 == 0 {
 				break
@@ -361,8 +360,8 @@ func fixup(L int, k int) {
 	var L1 int
 
 	for L != 0 {
-		L1 = code[L]
-		code[L] = k + 0x2800
+		L1 = Code[L]
+		Code[L] = k + 0x2800
 		L = L1
 	}
 }
@@ -397,44 +396,44 @@ func IfStat() {
 	Guarded(PICS.Then, &L)
 	L0 = 0
 	for sym == PICS.Elsif {
-		code[pc] = L0
-		L0 = pc
-		pc += 1
-		fixup(L, pc)
+		Code[Pc] = L0
+		L0 = Pc
+		Pc += 1
+		fixup(L, Pc)
 		PICS.Get(&sym)
 		Guarded(PICS.Then, &L)
 	}
 	if sym == PICS.Else_ {
-		code[pc] = L0
-		L0 = pc
-		pc += 1
-		fixup(L, pc)
+		Code[Pc] = L0
+		L0 = Pc
+		Pc += 1
+		fixup(L, Pc)
 		PICS.Get(&sym)
 		StatSeq()
 	} else {
-		fixup(L, pc)
+		fixup(L, Pc)
 	}
 	if sym == PICS.End {
 		PICS.Get(&sym)
 	} else {
 		Mark(15)
 	}
-	fixup(L0, pc)
+	fixup(L0, Pc)
 }
 
 // Conditional Repetition: condition first
 func WhileStat() {
 	var L0, L int
 
-	L0 = pc
+	L0 = Pc
 	Guarded(PICS.Do, &L)
 	emit(0x28, L0)
-	fixup(L, pc)
+	fixup(L, Pc)
 	for sym == PICS.Elsif {
 		PICS.Get(&sym)
 		Guarded(PICS.Do, &L)
 		emit(0x28, L0)
-		fixup(L, pc)
+		fixup(L, Pc)
 	}
 	if sym == PICS.End {
 		PICS.Get(&sym)
@@ -447,17 +446,17 @@ func WhileStat() {
 func RepeatStat() {
 	var L0, L int
 
-	L0 = pc
+	L0 = Pc
 	StatSeq()
 	if sym == PICS.Until {
 		PICS.Get(&sym)
 		condition(&L)
-		if (code[pc-4]/0x100 == 3) && (code[pc-3]/0x100 == 8) &&
-			(code[pc-2] == 0x1D03) && (code[pc-4]%0x80 == code[pc-3]%0x100) {
-			code[pc-4] += 0x800
-			code[pc-3] = 0
-			pc -= 2
-			L = pc - 1
+		if (Code[Pc-4]/0x100 == 3) && (Code[Pc-3]/0x100 == 8) &&
+			(Code[Pc-2] == 0x1D03) && (Code[Pc-4]%0x80 == Code[Pc-3]%0x100) {
+			Code[Pc-4] += 0x800
+			Code[Pc-3] = 0
+			Pc -= 2
+			L = Pc - 1
 		}
 		fixup(L, L0)
 	} else if sym == PICS.End {
@@ -478,11 +477,11 @@ func AssignStat(x Object) {
 		Mark(2)
 	}
 	expression()
-	w = code[pc-1]
+	w = Code[Pc-1]
 	if w == 0x3000 {
-		code[pc-1] = x.a + 0x180
+		Code[Pc-1] = x.a + 0x180
 	} else if ((w / 0x100) <= 13) && (w%0x100 == x.a) {
-		code[pc-1] += 0x80
+		Code[Pc-1] += 0x80
 	} else {
 		emit(0, x.a+0x80)
 	}
@@ -582,7 +581,7 @@ func Statement() {
 		} else {
 			Operand2(3)
 		}
-		emit(0x28, pc-1)
+		emit(0x28, Pc-1)
 	case PICS.Lparen:
 		PICS.Get(&sym)
 		StatSeq()
@@ -612,7 +611,7 @@ func ProcDecl() {
 	obj = IdList
 	partyp = 0
 	restyp = 0
-	pc0 = pc
+	pc0 = Pc
 
 	// Procedure name
 	if sym == PICS.Ident {
@@ -788,10 +787,10 @@ func Module() {
 		ProcDecl()
 	}
 
-	if pc > 1 {
-		code[0] = pc + 0x2800
+	if Pc > 1 {
+		Code[0] = Pc + 0x2800
 	} else {
-		pc = 0
+		Pc = 0
 	}
 
 	// Module body
@@ -810,26 +809,22 @@ func Module() {
 	}
 }
 
+
 // Entry point for module
 func Compile(reader *bufio.Reader) {
 	IdList = IdList0
 	PICS.Init(reader)
-	pc = 1
+	Pc = 1
 	dc = 12
-	err = false
+	Err = false
 	PICS.Get(&sym)
 	Module()
 	fmt.Printf("Errors: %d\n", errs)
-	if Dump {
-		for addr, val := range code {
-			fmt.Printf("%#.3x %#.4x\n", addr, val)
-		}
-	}
 }
 
 // Run once on startup
 func init() {
-	err = false
+	Err = false
 	errs = 0
 	undef = new(ObjDesc)
 	enter("T", 1, 2, 1)

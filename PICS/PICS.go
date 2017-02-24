@@ -12,7 +12,7 @@ package PICS
 
 import (
 	"bufio"
-	"fmt"
+	//"fmt"
 	"io"
 )
 
@@ -293,7 +293,7 @@ func Get(sym *int) {
 			break
 		}
 	}
-	fmt.Printf("Gets(): sym = %d\n", *sym)
+	//fmt.Printf("Gets(): sym = %d\n", *sym)
 }
 
 // Scanner init
