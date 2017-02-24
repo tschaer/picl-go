@@ -110,11 +110,13 @@ func main() {
 		}
 	}
    
-   // Output
+   // Output on successful compile
    // ##TODO: derive the output file name from the input file name
    //         Or allow Stdout to be used via cmd line switch
-   f, err := os.Create("out.hex")
-   hexfile(f)
-   f.Close()
+   if !PICL.Err {
+      f, _ := os.Create("out.hex")
+      hexfile(f)
+      f.Close()
+   }
    
 }
