@@ -49,7 +49,7 @@ const (
 	Lparen    = 22
 	Becomes   = 23
 	Ident     = 24
-	If_       = 25
+	If        = 25
 	While     = 26
 	Repeat    = 27
 	Inc       = 28
@@ -62,14 +62,14 @@ const (
 	Do        = 35
 	Semicolon = 36
 	End       = 37
-	Else_     = 38
+	Else      = 38
 	Elsif     = 39
 	Until     = 40
-	Return_   = 41
-	Int_      = 42
+	Return    = 41
+	Int       = 42
 	Set       = 43
-	Bool_     = 44
-	Const_    = 50
+	Bool      = 44
+	Const     = 50
 	Begin     = 51
 	Proced    = 52
 	Module    = 53
@@ -96,10 +96,10 @@ var key = [...]string{
 	"UNTIL", "WHILE", "~ ",
 }
 var symno = [...]int{
-	Begin, Bool_, Const_, Dec,
-	Do, Else_, Elsif, End,
-	If_, Inc, Int_, Module,
-	Or, Proced, Repeat, Return_,
+	Begin, Bool, Const, Dec,
+	Do, Else, Elsif, End,
+	If, Inc, Int, Module,
+	Or, Proced, Repeat, Return,
 	Rol, Ror, Set, Then,
 	Until, While,
 }

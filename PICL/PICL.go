@@ -403,7 +403,7 @@ func IfStat() {
 		PICS.Get(&sym)
 		Guarded(PICS.Then, &L)
 	}
-	if sym == PICS.Else_ {
+	if sym == PICS.Else {
 		Code[Pc] = L0
 		L0 = Pc
 		Pc += 1
@@ -590,7 +590,7 @@ func Statement() {
 		} else {
 			Mark(8)
 		}
-	case PICS.If_:
+	case PICS.If:
 		PICS.Get(&sym)
 		IfStat()
 	case PICS.While:
@@ -624,8 +624,8 @@ func ProcDecl() {
 	// Optional parens with optional argument
 	if sym == PICS.Lparen {
 		PICS.Get(&sym)
-		if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-			partyp = sym - PICS.Int_ + 1
+		if (sym >= PICS.Int) && (sym <= PICS.Bool) {
+			partyp = sym - PICS.Int + 1
 			PICS.Get(&sym)
 			if sym == PICS.Ident {
 				enter(string(PICS.Id), variable, partyp, dc)
@@ -646,8 +646,8 @@ func ProcDecl() {
 	// Optional result type
 	if sym == PICS.Colon {
 		PICS.Get(&sym)
-		if (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-			restyp = sym - PICS.Int_ + 1
+		if (sym >= PICS.Int) && (sym <= PICS.Bool) {
+			restyp = sym - PICS.Int + 1
 			PICS.Get(&sym)
 		} else {
 			Mark(10)
@@ -662,8 +662,8 @@ func ProcDecl() {
 	}
 
 	// Variable declarations
-	for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-		typ = sym - PICS.Int_ + 1
+	for (sym >= PICS.Int) && (sym <= PICS.Bool) {
+		typ = sym - PICS.Int + 1
 		PICS.Get(&sym)
 		for sym == PICS.Ident {
 			enter(string(PICS.Id), variable, typ, dc)
@@ -687,7 +687,7 @@ func ProcDecl() {
 	} else {
 		Mark(21)
 	}
-	if sym == PICS.Return_ {
+	if sym == PICS.Return {
 		PICS.Get(&sym)
 		expression()
 	}
@@ -738,7 +738,7 @@ func Module() {
 	}
 
 	// CONST Declarations
-	if sym == PICS.Const_ {
+	if sym == PICS.Const {
 		PICS.Get(&sym)
 		for sym == PICS.Ident {
 			enter(string(PICS.Id), constant, 1, 0)
@@ -763,8 +763,8 @@ func Module() {
 	}
 
 	// Var Declarations: INT, BOOL, SET
-	for (sym >= PICS.Int_) && (sym <= PICS.Bool_) {
-		typ = sym - PICS.Int_ + 1
+	for (sym >= PICS.Int) && (sym <= PICS.Bool) {
+		typ = sym - PICS.Int + 1
 		PICS.Get(&sym)
 		// May be a list of identifiers eg INT a, b, c
 		for sym == PICS.Ident {
@@ -827,9 +827,9 @@ func init() {
 	Err = false
 	errs = 0
 	undef = new(ObjDesc)
-	enter("T", 1, 2, 1)
-	enter("S", 1, 2, 3)
-	enter("A", 1, 2, 5)
-	enter("B", 1, 2, 6)
+	enter("T", variable, PICS.Set_t, 0x01)
+	enter("S", variable, PICS.Set_t, 0x03)
+	enter("A", variable, PICS.Set_t, 0x05)
+	enter("B", variable, PICS.Set_t, 0x06)
 	IdList0 = IdList
 }

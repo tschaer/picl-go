@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+   "io"
 	"os"
 	"picl-go/PICL"
 )
@@ -34,44 +35,48 @@ func init() {
 // aaaa = 2 byte address
 // tt = 1 byte type field (00 for normal, 01 for last record)
 // dd = data bytes
-func hexfile() {
+// cc = checksum
+func hexfile(f io.Writer) {
    var byteH, byteL, checksum int
-   var recs, lastrec int
+   var recs, lastrec, addr int
    
    recs = PICL.Pc / 8
    lastrec = PICL.Pc % 8
    
    // Full records of 16 bytes (note each instruction is 2 bytes!)
    for i := 0; i < recs; i += 1 {
-      fmt.Printf(":10 %.4X 00", i*16)
-      checksum = 0
+      addr = i*16
+      fmt.Fprintf(f, ":10%.4X00", addr)
+      checksum = 0x10 + ((addr & 0xFF00) >> 8) + (addr & 0x00FF)
       for j := 0; j < 8; j += 1 {
          byteH = (PICL.Code[i*8+j] & 0xFF00) >> 8
          byteL = PICL.Code[i*8+j] & 0x00FF
          // Remember to byte swap!
-         fmt.Printf(" %.2X %.2X", byteL, byteH)
+         fmt.Fprintf(f, "%.2X%.2X", byteL, byteH)
          checksum = checksum + byteH + byteL
       }
-      fmt.Printf(" %.2X\n", (^checksum+1) & 0x00FF)
+      fmt.Fprintf(f, "%.2X\n", (^(checksum & 0x00FF) + 1) & 0x00FF)
    }
    
    // The last, partial record
    if lastrec > 0 {
       here := recs * 8
-      fmt.Printf(":%.2X %.4X 00", lastrec*2, here*2)
-      checksum = 0
+      addr = here * 2
+      fmt.Fprintf(f, ":%.2X%.4X00", lastrec*2, addr)
+      checksum = lastrec*2 + ((addr & 0xFF00) >> 8) + (addr & 0x00FF)
       for i := here; i < PICL.Pc; i+= 1 {
          byteH = (PICL.Code[i] & 0xFF00) >> 8
          byteL = PICL.Code[i] & 0x00FF
          // Remember to byte swap!
-         fmt.Printf(" %.2X %.2X", byteL, byteH)
+         fmt.Fprintf(f, "%.2X%.2X", byteL, byteH)
          checksum = checksum + byteH + byteL
       }
-      fmt.Printf(" %.2X\n", (^checksum+1) & 0x00FF)
+      fmt.Fprintf(f, "%.2X\n", (^(checksum & 0x00FF) + 1) & 0x00FF)
    }
    
    // Terminating record
-   fmt.Printf(":00 0000 01 FF\n")
+   fmt.Fprintf(f, ":00000001FF\n")
+   
 }
 
 func main() {
@@ -87,7 +92,7 @@ func main() {
 		return
 	}
 
-	// Compile source file. 
+	// Compile source file
 	filename := flag.Arg(0)
 	file, err := os.Open(filename)
 	if err != nil {
@@ -105,7 +110,11 @@ func main() {
 		}
 	}
    
-   // Output. Memory image is in PICL.Code
-   hexfile()
+   // Output
+   // ##TODO: derive the output file name from the input file name
+   //         Or allow Stdout to be used via cmd line switch
+   f, err := os.Create("out.hex")
+   hexfile(f)
+   f.Close()
    
 }
