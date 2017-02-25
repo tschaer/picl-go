@@ -14,6 +14,7 @@ import (
 	"flag"
 	"fmt"
    "io"
+   "path/filepath"
 	"os"
 	"picl-go/PICL"
 )
@@ -92,10 +93,16 @@ func main() {
 		return
 	}
 
-	// Compile source file
+	// Open source file
 	filename := flag.Arg(0)
+   if filepath.Ext(filename) != ".pcl" {
+      fmt.Printf("Source file must end in .pcl\n")
+      return
+   }
 	file, err := os.Open(filename)
-	if err != nil {
+	
+   // Compile
+   if err != nil {
 		fmt.Println(err)
 		return
 	} else {
@@ -111,10 +118,9 @@ func main() {
 	}
    
    // Output on successful compile
-   // ##TODO: derive the output file name from the input file name
-   //         Or allow Stdout to be used via cmd line switch
    if !PICL.Err {
-      f, _ := os.Create("out.hex")
+      fname := filepath.Base(filename)
+      f, _ := os.Create(fname[:len(fname)-4]+".hex")
       hexfile(f)
       f.Close()
    }
