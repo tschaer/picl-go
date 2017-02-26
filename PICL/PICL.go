@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+   "io"
 	"picl-go/PICS"
 )
 
@@ -36,26 +37,36 @@ var (
 
 // Instruction tables for decoder
 var table0 = [...]string{
-	"MOVWF", "CLRF ", "SUBWF", "DECF ",
-	"IORWF", "ANDWF", "XORWF", "ADDWF",
-	"MOVFW", "COMF ", "INCF ", "DECFSZ",
-	"RRF  ", "RLF  ", "SWAPF", "INCFSZ",
+	"MOVWF ", "CLRF  ", "SUBWF ", "DECF  ",
+	"IORWF ", "ANDWF ", "XORWF ", "ADDWF ",
+	"MOVF  ", "COMF  ", "INCF  ", "DECFSZ",
+	"RRF   ", "RLF   ", "SWAPF ", "INCFSZ",
 }
 
 var table1 = [...]string{
-	"BCF  ", "BSF  ", "BTFSC", "BTFSS",
+	"BCF   ", "BSF   ", "BTFSC ", "BTFSS ",
 }
 
 var table2 = [...]string{
-	"CALL ", "GOTO ",
+	"CALL  ", "GOTO  ",
 }
 
 var table3 = [...]string{
-	"MOVLW", "", "", "",
-	"RETLW", "", "", "",
-	"IORLW", "ANDLW", "XORLW", "",
-	"SUBLW", "ADDLW",
+	"MOVLW ", "", "", "",
+	"RETLW ", "", "", "",
+	"IORLW ", "ANDLW ", "XORLW ", "",
+	"SUBLW ", "ADDLW ",
 }
+
+var forms = [...]string{
+   "", "variable", "constant", "procedure",
+}
+
+var types = [...]string{
+   "<>", "int", "set", "bool",
+}
+
+var regs = [...]string{"W", "F"}
 
 // Parse error
 func Mark(n int) {
@@ -822,6 +833,42 @@ func Compile(reader *bufio.Reader) {
 	fmt.Printf("Errors: %d\n", errs)
 }
 
+// Generate listing
+func Decode(w io.Writer) {
+   var i, u, v int
+   var obj Object
+   
+   // Print symbols at module scope
+   fmt.Fprintf(w, "Symbols:\n")
+   obj = IdList
+   for obj != IdList0 {
+      fmt.Fprintf(w, "%#.2x %s %s %s\n", obj.a, forms[obj.form], types[obj.typ], obj.name)
+      obj = obj.next
+   }
+   // Generate code listing from memory contents
+   fmt.Fprintf(w, "\nAddr  Opcode Source\n")
+   for i = 0; i < Pc; i += 1 {
+      u = Code[i]
+      fmt.Fprintf(w, "%#.3x %#.4x ", i, u)
+      v = u / 0x1000
+      u = u % 0x1000
+      switch v {
+         case 0:
+            if u == 8 {
+               fmt.Fprintf(w, "RET\n")
+            } else {
+               fmt.Fprintf(w, "%s %#.2x,%s\n", table0[u/0x100], u%0x80, regs[(u/0x80)%2])
+            }
+         case 1:
+            fmt.Fprintf(w, "%s %#.2x.%d\n", table1[u/0x400], u%0x80, (u/0x80)%8)
+         case 2:
+            fmt.Fprintf(w, "%s %#.3x\n", table2[u/0x800], u%0x100)
+         case 3:
+            fmt.Fprintf(w, "%s %#.2x\n", table3[u/0x100], u%0x100)
+      }
+   }
+}
+   
 // Run once on startup
 func init() {
 	Err = false

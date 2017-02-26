@@ -2,9 +2,9 @@
 Driver file for N. Wirth's PICL compiler
 
 Build with:
-C:\> go install picl/piclc
+C:\> go install picl-go/piclc
 Run:
-C:\Data\Personal\go\bin> piclc file.asm
+C:\Data\Personal\go\bin> piclc file.pcl
 */
 
 package main
@@ -19,14 +19,16 @@ import (
 	"picl-go/PICL"
 )
 
-const Ver = "PICL compiler v1.0-alpha-2"
+const Ver = "PICL compiler v1.0-alpha-3"
 
 var (
    dump bool
+   list bool
 )
 
 func init() {
-	flag.BoolVar(&dump, "d", false, "Dump listing output to console")
+	flag.BoolVar(&dump, "d", false, "Dump program memory image to console")
+   flag.BoolVar(&list, "l", false, "Generate listing file")
 }
 
 // Output an Intel HEX-record file
@@ -120,9 +122,15 @@ func main() {
    // Output on successful compile
    if !PICL.Err {
       fname := filepath.Base(filename)
-      f, _ := os.Create(fname[:len(fname)-4]+".hex")
-      hexfile(f)
-      f.Close()
+      froot := fname[:len(fname)-4]
+      h, _ := os.Create(froot+".hex")
+      hexfile(h)
+      h.Close()
+      if list {
+         l, _ := os.Create(froot+".lst")
+         PICL.Decode(l)
+         l.Close()
+      }
    }
    
 }
