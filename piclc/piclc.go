@@ -19,7 +19,7 @@ import (
 	"picl-go/PICL"
 )
 
-const Ver = "PICL compiler v1.0-alpha-3"
+const Ver = "PICL compiler v1.0-beta-1"
 
 var (
    dump bool

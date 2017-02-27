@@ -826,7 +826,7 @@ func Compile(reader *bufio.Reader) {
 	IdList = IdList0
 	PICS.Init(reader)
 	Pc = 1
-	dc = 12
+	dc = 0x20
 	Err = false
 	PICS.Get(&sym)
 	Module()
@@ -874,9 +874,9 @@ func init() {
 	Err = false
 	errs = 0
 	undef = new(ObjDesc)
-	enter("T", variable, PICS.Set_t, 0x01)
-	enter("S", variable, PICS.Set_t, 0x03)
-	enter("A", variable, PICS.Set_t, 0x05)
-	enter("B", variable, PICS.Set_t, 0x06)
+	enter("TMR0", variable, PICS.Set_t, 0x01)
+	enter("STATUS", variable, PICS.Set_t, 0x03)
+	enter("PORTA", variable, PICS.Set_t, 0x05)
+	enter("PORTC", variable, PICS.Set_t, 0x07)
 	IdList0 = IdList
 }
