@@ -1,4 +1,4 @@
-{ Blink an LED connected to Port A.0 }
+{ Generate square wave on Port A.0 }
 MODULE Blink;
    INT i;
 BEGIN

@@ -1,0 +1,31 @@
+{ Generate square wave on Port A.0 }
+MODULE Blink;
+   INT i;
+   
+   PROCEDURE delay(INT d);
+      INT e;
+   BEGIN
+      e := 255;
+      REPEAT
+         REPEAT
+            DEC e
+         UNTIL e = 0;
+         DEC d;
+      UNTIL d = 0
+   END delay;
+
+BEGIN
+   { Set A.0 to output }
+   !STATUS.5;
+   !~PORTA.0;
+   !~STATUS.5;
+   
+   { Toggle pin }
+   i := 0;
+   WHILE i = 0 DO
+      !PORTA.0;
+      delay(255);
+      !~PORTA.0;
+      delay(250)
+   END
+END Blink.
