@@ -6,6 +6,17 @@ MODULE Blink2;
       
    INT i;
    
+   { Uses Timer1 instead of a delay loop }
+   PROCEDURE Delay;
+   BEGIN
+      !~PIR1.0;
+      !~T1CON.0;
+      TMR1L := RELOADL;
+      TMR1H := RELOADH;
+      !T1CON.0;
+      ?PIR1.0;
+   END Delay;
+   
 BEGIN
    { Set A.0 to output }
    !STATUS.5;
@@ -19,21 +30,8 @@ BEGIN
    i := 0;
    WHILE i = 0 DO
       !PORTA.0;
-      
-      !~PIR1.0;
-      !~T1CON.0;
-      TMR1L := RELOADL;
-      TMR1H := RELOADH;
-      !T1CON.0;
-      ?PIR1.0;
-      
+      Delay;
       !~PORTA.0;
-      
-      !~PIR1.0;
-      !~T1CON.0;
-      TMR1L := RELOADL;
-      TMR1H := RELOADH;
-      !T1CON.0;
-      ?PIR1.0;
+      Delay     
    END
 END Blink2.
