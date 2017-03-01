@@ -175,7 +175,7 @@ func getDigit() int {
 
 // Get a SET literal ($xx)
 func hex() {
-	Val = getDigit()<<8 | getDigit()
+	Val = getDigit()<<4 | getDigit()
 }
 
 // Return next symbol in input

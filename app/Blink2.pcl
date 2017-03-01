@@ -1,0 +1,39 @@
+{ Blink LED on Port A.0 with timer polling }
+MODULE Blink2;
+   CONST 
+      RELOADH = $85;
+      RELOADL = $ED;
+      
+   INT i;
+   
+BEGIN
+   { Set A.0 to output }
+   !STATUS.5;
+   !~PORTA.0;
+   !~STATUS.5;
+   
+   { Set up Timer 1 for 125kHz }
+   T1CON := $34;
+   
+   { Toggle pin }
+   i := 0;
+   WHILE i = 0 DO
+      !PORTA.0;
+      
+      !~PIR1.0;
+      !~T1CON.0;
+      TMR1L := RELOADL;
+      TMR1H := RELOADH;
+      !T1CON.0;
+      ?PIR1.0;
+      
+      !~PORTA.0;
+      
+      !~PIR1.0;
+      !~T1CON.0;
+      TMR1L := RELOADL;
+      TMR1H := RELOADH;
+      !T1CON.0;
+      ?PIR1.0;
+   END
+END Blink2.

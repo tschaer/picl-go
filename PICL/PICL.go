@@ -874,9 +874,36 @@ func init() {
 	Err = false
 	errs = 0
 	undef = new(ObjDesc)
+   // PIC16F688 SFRs
+   // NOTE: 7-bit addresses only. Bank switching done by user
+   enter("INDF", variable, PICS.Set_t, 0x00)
 	enter("TMR0", variable, PICS.Set_t, 0x01)
+   enter("PCL", variable, PICS.Set_t, 0x02)
 	enter("STATUS", variable, PICS.Set_t, 0x03)
-	enter("PORTA", variable, PICS.Set_t, 0x05)
-	enter("PORTC", variable, PICS.Set_t, 0x07)
+   enter("FSR", variable, PICS.Set_t, 0x04)
+	enter("PORTA", variable, PICS.Set_t, 0x05); enter("TRISA", variable, PICS.Set_t, 0x05)
+	enter("PORTC", variable, PICS.Set_t, 0x07); enter("TRISC", variable, PICS.Set_t, 0x07)
+   enter("PCLATH", variable, PICS.Set_t, 0x0A)
+   enter("INTCON", variable, PICS.Set_t, 0x0B)
+   enter("PIR1", variable, PICS.Set_t, 0x0C); enter("PIE1", variable, PICS.Set_t, 0x0C)
+   enter("TMR1L", variable, PICS.Set_t, 0x0E); enter("PCON", variable, PICS.Set_t, 0x0E)
+   enter("TMR1H", variable, PICS.Set_t, 0x0F); enter("OSCCON", variable, PICS.Set_t, 0x0F)
+   enter("T1CON", variable, PICS.Set_t, 0x10); enter("OSCTUNE", variable, PICS.Set_t, 0x10)
+   enter("BAUDCTL", variable, PICS.Set_t, 0x11); enter("ANSEL", variable, PICS.Set_t, 0x11)
+   enter("SPBRGH", variable, PICS.Set_t, 0x12);
+   enter("SPBRG", variable, PICS.Set_t, 0x13);
+   enter("RCREG", variable, PICS.Set_t, 0x14);
+   enter("TXREG", variable, PICS.Set_t, 0x15); enter("WPUA", variable, PICS.Set_t, 0x15)
+   enter("TXSTA", variable, PICS.Set_t, 0x16); enter("IOCA", variable, PICS.Set_t, 0x16)
+   enter("RCSTA", variable, PICS.Set_t, 0x17); enter("EEDATH", variable, PICS.Set_t, 0x17)
+   enter("WDTCON", variable, PICS.Set_t, 0x18); enter("EEADRH", variable, PICS.Set_t, 0x18)
+   enter("CMCON0", variable, PICS.Set_t, 0x19); enter("VRCON", variable, PICS.Set_t, 0x19)
+   enter("CMCON1", variable, PICS.Set_t, 0x1A); enter("EEDAT", variable, PICS.Set_t, 0x1A)
+   enter("EEADR", variable, PICS.Set_t, 0x1B)
+   enter("EECON1", variable, PICS.Set_t, 0x1C)
+   enter("EECON2", variable, PICS.Set_t, 0x1D)
+   enter("ADRESH", variable, PICS.Set_t, 0x1E); enter("ADRESL", variable, PICS.Set_t, 0x1E)
+   enter("ADCON0", variable, PICS.Set_t, 0x1F); enter("ADCON1", variable, PICS.Set_t, 0x1F)
+   
 	IdList0 = IdList
 }
