@@ -68,9 +68,41 @@ var types = [...]string{
 
 var regs = [...]string{"W", "F"}
 
+var parseErr = [...]string{
+   "",
+   "",
+   "Left side of an assignment must be a variable",
+   "Procedure name expected before (",
+   "",
+   "Equals expected after constant's name",
+   "",
+   "Number expected",
+   ") expected after expression",
+   "Operator expected",
+   "Identifier expected or unknown identifier",
+   "Bit selector expected after .",
+   "Types in a dyadic expression must match",
+   "Integer type not allowed with *",
+   "THEN or DO expected after condition",
+   "END expected after IF block",
+   "END expected after WHILE block",
+   "",
+   "END expected after PROCEDURE block (check semicolons after each statement)",
+   "END expected after MODULE block",
+   "Semicolon expected",
+   "BEGIN expected",
+   "Names at beginning and end do not match",
+   "",
+   "",
+   "UNTIL <condition> or END expected after REPEAT block",
+}
+   
+   
+   
+   
 // Parse error
-func Mark(n int) {
-	fmt.Printf("Parse error, code: %d\n", n)
+func Mark(msg string, n int) {
+	fmt.Printf("Parse error - %s, code: %d %s\n", msg, n, parseErr[n])
 	Err = true
 	errs += 1
 }
@@ -85,7 +117,7 @@ func this(id []byte) Object {
 		obj = obj.next
 	}
 	if obj == nil {
-		Mark(10)
+		Mark("this", 10)
 		obj = undef
 	}
 	return obj
@@ -124,7 +156,7 @@ func index(n *int) {
 			*n = PICS.Val
 			PICS.Get(&sym)
 		} else {
-			Mark(11)
+			Mark("index", 11)
 		}
 	}
 }
@@ -147,14 +179,14 @@ func expression() {
 		xt = PICS.Typ
 		PICS.Get(&sym)
 	} else {
-		Mark(10)
+		Mark("expression", 10)
 		xval = 0
 	}
 	// Is it a function procedure?
 	if sym == PICS.Lparen {
 		PICS.Get(&sym)
 		if x.form != procedure {
-			Mark(3)
+			Mark("expression", 3)
 		}
 		if sym != PICS.Rparen {
 			expression()
@@ -163,7 +195,7 @@ func expression() {
 		if sym == PICS.Rparen {
 			PICS.Get(&sym)
 		} else {
-			Mark(8)
+			Mark("expression", 8)
 		}
 	} else if (sym >= PICS.Ast) && (sym <= PICS.Minus) {
 		// dyadic expression
@@ -180,7 +212,7 @@ func expression() {
 			} else if y.form == constant {
 				emit(0x30, y.a)
 			} else {
-				Mark(10)
+				Mark("expression", 10)
 			}
 		} else if sym == PICS.Number {
 			yval = PICS.Val
@@ -190,7 +222,7 @@ func expression() {
 		}
 		// Type check
 		if xt != yt {
-			Mark(111)
+			Mark("expression", 12)
 		}
 		// Instruction selection
 		if xf == variable {
@@ -208,7 +240,7 @@ func expression() {
 				}
 			} else if op == PICS.Ast {
 				if xt == PICS.Int_t {
-					Mark(11)
+					Mark("expression", 13)
 				} else {
 					emit(0x05, x.a)
 				}
@@ -228,22 +260,22 @@ func expression() {
 				}
 			} else if op == PICS.Ast {
 				if xt == PICS.Int_t {
-					Mark(11)
+					Mark("expression", 13)
 				} else {
 					emit(0x39, xval)
 				}
 			} else {
-				Mark(9)
+				Mark("expression", 9)
 			}
 		} else {
-			Mark(10)
+			Mark("expression", 10)
 		}
 	} else if xf == variable {
 		emit(0x08, x.a)
 	} else if xf == constant {
 		emit(0x30, xval)
 	} else {
-		Mark(10)
+		Mark("expression", 10)
 	}
 }
 
@@ -309,10 +341,10 @@ func term() {
 			index(&n)
 			emit1(2, n, x.a)
 		} else {
-			Mark(10)
+			Mark("term", 10)
 		}
 	} else {
-		Mark(10)
+		Mark("term", 10)
 	}
 }
 
@@ -395,7 +427,7 @@ func Guarded(s int, L *int) {
 	if sym == s {
 		PICS.Get(&sym)
 	} else {
-		Mark(14)
+		Mark("Guarded", 14)
 	}
 	StatSeq()
 }
@@ -427,7 +459,7 @@ func IfStat() {
 	if sym == PICS.End {
 		PICS.Get(&sym)
 	} else {
-		Mark(15)
+		Mark("IfStat", 15)
 	}
 	fixup(L0, Pc)
 }
@@ -449,7 +481,7 @@ func WhileStat() {
 	if sym == PICS.End {
 		PICS.Get(&sym)
 	} else {
-		Mark(16)
+		Mark("WhileStat", 16)
 	}
 }
 
@@ -474,7 +506,7 @@ func RepeatStat() {
 		PICS.Get(&sym)
 		emit(0x28, L0)
 	} else {
-		Mark(25)
+		Mark("RepeatStat", 25)
 	}
 }
 
@@ -485,7 +517,7 @@ func AssignStat(x Object) {
 
 	PICS.Get(&sym)
 	if x.form != variable {
-		Mark(2)
+		Mark("AssignStat", 2)
 	}
 	expression()
 	w = Code[Pc-1]
@@ -502,7 +534,7 @@ func AssignStat(x Object) {
 // NOTE: factored out from Statement() vs original code
 func CallStat(x Object) {
 	if x.form != procedure {
-		Mark(3)
+		Mark("CallStat", 3)
 	}
 	if sym == PICS.Lparen {
 		PICS.Get(&sym)
@@ -511,7 +543,7 @@ func CallStat(x Object) {
 		if sym == PICS.Rparen {
 			PICS.Get(&sym)
 		} else {
-			Mark(8)
+			Mark("CallStat", 8)
 		}
 	} else {
 		emit(0x20, x.a)
@@ -525,11 +557,11 @@ func Operand1(cd int) {
 		x = this(PICS.Id)
 		PICS.Get(&sym)
 		if x.form != variable {
-			Mark(2)
+			Mark("Operand1", 2)
 		}
 		emit(cd, x.a+0x80)
 	} else {
-		Mark(10)
+		Mark("Operand1", 10)
 	}
 }
 
@@ -541,12 +573,12 @@ func Operand2(cd int) {
 		x = this(PICS.Id)
 		PICS.Get(&sym)
 		if x.form != variable {
-			Mark(2)
+			Mark("Operand2", 2)
 		}
 		index(&n)
 		emit1(cd, n, x.a)
 	} else {
-		Mark(10)
+		Mark("Operand2", 10)
 	}
 }
 
@@ -599,7 +631,7 @@ func Statement() {
 		if sym == PICS.Rparen {
 			PICS.Get(&sym)
 		} else {
-			Mark(8)
+			Mark("Statement", 8)
 		}
 	case PICS.If:
 		PICS.Get(&sym)
@@ -629,7 +661,7 @@ func ProcDecl() {
 		name = append(name, PICS.Id...)
 		PICS.Get(&sym)
 	} else {
-		Mark(10)
+		Mark("ProcDecl", 10)
 	}
 
 	// Optional parens with optional argument
@@ -644,13 +676,13 @@ func ProcDecl() {
 				emit(0, dc+0x80)
 				dc += 1
 			} else {
-				Mark(10)
+				Mark("ProcDecl", 10)
 			}
 		}
 		if sym == PICS.Rparen {
 			PICS.Get(&sym)
 		} else {
-			Mark(8)
+			Mark("ProcDecl", 8)
 		}
 	}
 
@@ -661,7 +693,7 @@ func ProcDecl() {
 			restyp = sym - PICS.Int + 1
 			PICS.Get(&sym)
 		} else {
-			Mark(10)
+			Mark("ProcDecl", 10)
 		}
 	}
 
@@ -669,7 +701,7 @@ func ProcDecl() {
 	if sym == PICS.Semicolon {
 		PICS.Get(&sym)
 	} else {
-		Mark(20)
+		Mark("ProcDecl", 20)
 	}
 
 	// Variable declarations
@@ -687,7 +719,7 @@ func ProcDecl() {
 		if sym == PICS.Semicolon {
 			PICS.Get(&sym)
 		} else {
-			Mark(20)
+			Mark("ProcDecl", 20)
 		}
 	}
 
@@ -696,7 +728,7 @@ func ProcDecl() {
 		PICS.Get(&sym)
 		StatSeq()
 	} else {
-		Mark(21)
+		Mark("ProcDecl", 21)
 	}
 	if sym == PICS.Return {
 		PICS.Get(&sym)
@@ -707,19 +739,19 @@ func ProcDecl() {
 		PICS.Get(&sym)
 		if sym == PICS.Ident {
 			if !(bytes.Compare(PICS.Id, name) == 0) {
-				Mark(22)
+				Mark("ProcDecl", 22)
 			}
 			PICS.Get(&sym)
 		} else {
-			Mark(10)
+			Mark("ProcDecl", 10)
 		}
 	} else {
-		Mark(18)
+		Mark("ProcDecl", 18)
 	}
 	if sym == PICS.Semicolon {
 		PICS.Get(&sym)
 	} else {
-		Mark(20)
+		Mark("ProcDecl", 20)
 	}
 
 	// Clean up
@@ -739,12 +771,12 @@ func Module() {
 			name = append(name, PICS.Id...)
 			PICS.Get(&sym)
 		} else {
-			Mark(10)
+			Mark("Module", 10)
 		}
 		if sym == PICS.Semicolon {
 			PICS.Get(&sym)
 		} else {
-			Mark(20)
+			Mark("Module", 20)
 		}
 	}
 
@@ -760,15 +792,15 @@ func Module() {
 					IdList.a = PICS.Val
 					PICS.Get(&sym)
 				} else {
-					Mark(10)
+					Mark("Module", 7)
 				}
 			} else {
-				Mark(5)
+				Mark("Module", 5)
 			}
 			if sym == PICS.Semicolon {
 				PICS.Get(&sym)
 			} else {
-				Mark(20)
+				Mark("Module", 20)
 			}
 		}
 	}
@@ -813,10 +845,10 @@ func Module() {
 	if sym == PICS.End {
 		PICS.Get(&sym)
 		if !(bytes.Compare(PICS.Id, name) == 0) {
-			Mark(22)
+			Mark("Module", 22)
 		}
 	} else {
-		Mark(18)
+		Mark("Module", 18)
 	}
 }
 

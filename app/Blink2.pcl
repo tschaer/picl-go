@@ -3,8 +3,6 @@ MODULE Blink2;
    CONST 
       RELOADH = $85;
       RELOADL = $ED;
-      
-   INT i;
    
    { Uses Timer1 instead of a delay loop }
    PROCEDURE Delay;
@@ -27,8 +25,7 @@ BEGIN
    T1CON := $34;
    
    { Toggle pin }
-   i := 0;
-   WHILE i = 0 DO
+   REPEAT
       !PORTA.0;
       Delay;
       !~PORTA.0;
