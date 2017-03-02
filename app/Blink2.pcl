@@ -18,7 +18,7 @@ MODULE Blink2;
 BEGIN
    { Set A.0 to output }
    !STATUS.5;
-   !~PORTA.0;
+   !~TRISA.0;
    !~STATUS.5;
    
    { Set up Timer 1 for 125kHz }
